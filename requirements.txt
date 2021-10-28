@@ -1,0 +1,6 @@
+# Top-level requirements for prodmgr
+# (C) Copyright 2021 Hewlett Packard Enterprise Development LP.
+
+kubernetes >= 17.17.0, < 18.0
+pyyaml >=5.3.1, < 6.0
+urllib3 >= 1.26.7, < 2.0
