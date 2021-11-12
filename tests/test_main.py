@@ -5,10 +5,13 @@ Unit tests for prodmgr.
 """
 
 from argparse import Namespace
+from subprocess import CalledProcessError
 import unittest
 from unittest.mock import patch
 
-from tests.mocks import MOCK_PRODUCT_CATALOG_DATA
+from yaml import safe_dump
+
+from tests.mocks import MOCK_CONFIGMAP_OUTPUT
 
 from prodmgr.main import get_install_utility_image, run_install_utility, ProdmgrError
 from prodmgr.constants import (
@@ -27,9 +30,8 @@ class TestGetInstallUtilityImage(unittest.TestCase):
 
     def setUp(self):
         """Set up mocks."""
-        self.mock_k8s_api = patch('prodmgr.main.CoreV1Api').start().return_value
-        self.mock_load_config = patch('prodmgr.main.load_kube_config').start()
-        self.mock_k8s_api.read_namespaced_config_map.return_value.data = MOCK_PRODUCT_CATALOG_DATA
+        self.mock_check_output = patch('prodmgr.main.check_output').start()
+        self.mock_check_output.return_value.decode.return_value = MOCK_CONFIGMAP_OUTPUT
 
     def tearDown(self):
         """Stop patches."""
@@ -41,10 +43,10 @@ class TestGetInstallUtilityImage(unittest.TestCase):
         actual_image = get_install_utility_image(
             'sat', '1.0.0', DEFAULT_PRODUCT_CATALOG_NAME, DEFAULT_PRODUCT_CATALOG_NAMESPACE
         )
-        self.mock_k8s_api.read_namespaced_config_map.assert_called_once_with(
-            DEFAULT_PRODUCT_CATALOG_NAME, DEFAULT_PRODUCT_CATALOG_NAMESPACE
+        self.mock_check_output.assert_called_once_with(
+            ['kubectl', 'get', 'configmap', f'--namespace={DEFAULT_PRODUCT_CATALOG_NAMESPACE}',
+             DEFAULT_PRODUCT_CATALOG_NAME, '--output=yaml']
         )
-        self.mock_load_config.assert_called_once_with()
         self.assertEqual(expected_image, actual_image)
 
     def test_get_install_utility_image_unknown_product(self):
@@ -52,6 +54,37 @@ class TestGetInstallUtilityImage(unittest.TestCase):
         with self.assertRaisesRegex(ProdmgrError, f'No product information found for doesNotExist:1.0.0'):
             get_install_utility_image(
                 'doesNotExist', '1.0.0', DEFAULT_PRODUCT_CATALOG_NAME, DEFAULT_PRODUCT_CATALOG_NAMESPACE
+            )
+
+    def test_get_install_utility_image_command_failed(self):
+        """Test when the command to read the product catalog failed."""
+        self.mock_check_output.side_effect = CalledProcessError(returncode=1, cmd='kubectl')
+        expected_err_regex = ('Unable to to read ConfigMap services/cray-product-catalog: '
+                              'Command \'kubectl\' returned non-zero exit status 1.')
+        with self.assertRaisesRegex(ProdmgrError, expected_err_regex):
+            get_install_utility_image(
+                'sat', '1.0.0', DEFAULT_PRODUCT_CATALOG_NAME, DEFAULT_PRODUCT_CATALOG_NAMESPACE
+            )
+
+    def test_get_install_utility_image_bad_yaml(self):
+        """Test when the product catalog returned bad yaml."""
+        # Use a tab character as an example of something that is invalid YAML
+        self.mock_check_output.return_value.decode.return_value = '\t'
+        with self.assertRaisesRegex(ProdmgrError, 'Failed to load data from ConfigMap services/cray-product-catalog'):
+            get_install_utility_image(
+                'sat', '1.0.0', DEFAULT_PRODUCT_CATALOG_NAME, DEFAULT_PRODUCT_CATALOG_NAMESPACE
+            )
+
+    def test_get_install_utility_image_bad_product_yaml(self):
+        """Test when the product catalog returned bad yaml under a particular product."""
+        expected_err_regex = 'A product entry in ConfigMap services/cray-product-catalog contained invalid YAML'
+        # Use a tab character as an example of something that is invalid YAML
+        self.mock_check_output.return_value.decode.return_value = safe_dump(
+            {'data': {'sat': '\t'}}
+        )
+        with self.assertRaisesRegex(ProdmgrError, expected_err_regex):
+            get_install_utility_image(
+                'sat', '1.0.0', DEFAULT_PRODUCT_CATALOG_NAME, DEFAULT_PRODUCT_CATALOG_NAMESPACE
             )
 
     def test_get_install_utility_image_unknown_version(self):
@@ -67,8 +100,9 @@ class TestGetInstallUtilityImage(unittest.TestCase):
             get_install_utility_image(
                 'sat', '1.0.2', 'another-cray-product-catalog', 'more-services'
             )
-        self.mock_k8s_api.read_namespaced_config_map.assert_called_once_with(
-            'another-cray-product-catalog', 'more-services'
+        self.mock_check_output.assert_called_once_with(
+            ['kubectl', 'get', 'configmap', '--namespace=more-services',
+             'another-cray-product-catalog', '--output=yaml']
         )
 
 
@@ -91,7 +125,7 @@ class TestRunInstallUtility(unittest.TestCase):
             container_registry_hostname=DEFAULT_CONTAINER_REGISTRY_HOSTNAME
         )
         self.remaining_args = ['--additional-option']
-        self.mock_check_call = patch('prodmgr.main.subprocess.check_call').start()
+        self.mock_check_call = patch('prodmgr.main.check_call').start()
 
     def tearDown(self):
         """Stop patches."""

@@ -4,15 +4,9 @@ Main entry point for prodmgr.
 Copyright 2021 Hewlett Packard Enterprise Development LP.
 """
 
-import subprocess
-import warnings
+from subprocess import check_call, check_output, CalledProcessError
 
-from kubernetes.config import load_kube_config, ConfigException
-from kubernetes.client import CoreV1Api
-from kubernetes.client.rest import ApiException
-from urllib3.exceptions import MaxRetryError
-from yaml import safe_load, YAMLLoadWarning, YAMLError
-
+from yaml import safe_load, YAMLError
 
 from prodmgr.parser import create_parser
 
@@ -20,26 +14,6 @@ from prodmgr.parser import create_parser
 class ProdmgrError(Exception):
     """Something failed in the prodmgr script."""
     pass
-
-
-def get_k8s_api():
-    """Load a Kubernetes CoreV1Api and return it.
-
-    Returns:
-        CoreV1Api: The Kubernetes API.
-
-    Raises:
-        ProductInstallException: if there was an error loading the
-            Kubernetes configuration.
-    """
-    try:
-        with warnings.catch_warnings():
-            warnings.filterwarnings('ignore', category=YAMLLoadWarning)
-            load_kube_config()
-        return CoreV1Api()
-    except ConfigException as err:
-        print(err)
-        raise SystemExit(1)
 
 
 def read_catalog(product_catalog_name, product_catalog_namespace):
@@ -55,28 +29,31 @@ def read_catalog(product_catalog_name, product_catalog_namespace):
         dict: A dictionary of product names to dictionaries of version numbers
             to sub-component data.
     """
-    k8s_client = get_k8s_api()
+    config_map_name = f'ConfigMap {product_catalog_namespace}/{product_catalog_name}'
     try:
-        config_map = k8s_client.read_namespaced_config_map(product_catalog_name, product_catalog_namespace)
-    except MaxRetryError as err:
+        config_map = safe_load(check_output([
+            'kubectl', 'get', 'configmap', f'--namespace={product_catalog_namespace}',
+            product_catalog_name, '--output=yaml'
+        ]).decode())
+    except CalledProcessError as err:
         raise ProdmgrError(
-            f'Unable to connect to Kubernetes to read '
-            f'{product_catalog_namespace}/{product_catalog_name} ConfigMap: {err}'
+            f'Unable to to read {config_map_name}: {err}'
         )
-    except ApiException as err:
-        # The full string representation of ApiException is very long, so just log err.reason.
-        raise ProdmgrError(f'Error reading {product_catalog_namespace}/{product_catalog_name} ConfigMap: {err.reason}')
+    except YAMLError as err:
+        raise ProdmgrError(f'Failed to load data from {config_map_name}: {err}')
 
-    if config_map.data is None:
-        raise ProdmgrError(f'No data found in {product_catalog_namespace}/{product_catalog_name} ConfigMap.')
+    if not config_map.get('data'):
+        raise ProdmgrError(f'{config_map_name} has no data under "data" key')
 
     try:
         return {
             product_name: safe_load(product_versions)
-            for product_name, product_versions in config_map.data.items()
+            for product_name, product_versions in config_map['data'].items()
         }
     except YAMLError as err:
-        raise ProdmgrError(f'Failed to load ConfigMap data: {err}')
+        raise ProdmgrError(
+            f'A product entry in {config_map_name} contained invalid YAML: {err}'
+        )
 
 
 def get_install_utility_image(product, version, product_catalog_name, product_catalog_namespace):
@@ -157,8 +134,8 @@ def run_install_utility(image_name, image_version, args, remaining_args):
     podman_command.extend(remaining_args)
 
     try:
-        subprocess.check_call(podman_command)
-    except subprocess.CalledProcessError as cpe:
+        check_call(podman_command)
+    except CalledProcessError as cpe:
         raise ProdmgrError(f'Running install utility failed: {cpe}')
 
 
