@@ -20,3 +20,7 @@ SAT_VERSIONS = {
 MOCK_PRODUCT_CATALOG_DATA = {
     'sat': safe_dump(SAT_VERSIONS)
 }
+
+MOCK_CONFIGMAP_OUTPUT = safe_dump({
+    'data': MOCK_PRODUCT_CATALOG_DATA
+})

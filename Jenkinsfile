@@ -1,91 +1,11 @@
-// Jenkinsfile for prodmgr Python package
-// Copyright 2021 Hewlett Packard Enterprise Development LP
+// vi: sts=4 et ai
+// (C) Copyright 2021 Hewlett Packard Enterprise Development LP.
 
-@Library('dst-shared@master') _
+@Library("dst-shared") _
 
-pipeline {
-    agent {
-        kubernetes {
-            label "prodmgr-test-pod"
-            containerTemplate {
-                name "prodmgr-test-cont"
-                image "arti.dev.cray.com/dstbuildenv-docker-master-local/cray-sle15sp3_build_environment:latest"
-                ttyEnabled true
-                command "cat"
-            }
-        }
-    }
-
-    // Configuration options applicable to the entire job
-    options {
-        // This build should not take long, fail the build if it appears stuck
-        timeout(time: 10, unit: 'MINUTES')
-
-        // Don't fill up the build server with unnecessary cruft
-        buildDiscarder(logRotator(numToKeepStr: '5'))
-
-        // Add timestamps and color to console output
-        timestamps()
-    }
-
-    stages {
-        stage('Prepare') {
-            steps {
-                container('prodmgr-test-cont') {
-                    sh "make pymod_prepare"
-                }
-            }
-        }
-
-        stage('Build Package') {
-            steps {
-                container('prodmgr-test-cont') {
-                    sh "make pymod_build"
-                }
-            }
-        }
-
-        stage('Unit Tests') {
-            steps {
-                container('prodmgr-test-cont') {
-                    sh "make pymod_test"
-                }
-            }
-        }
-
-        stage('Publish') {
-            when { anyOf { branch 'release/*'; branch 'master' } }
-            steps {
-                container('prodmgr-test-cont') {
-                    transferArti(
-                        product: "internal",
-                        type: "pip",
-                        artifactName: "dist/*.tar.gz",
-                        subdir: "prodmgr"
-                    )
-                    transferArti(
-                        product: "internal",
-                        type: "pip",
-                        artifactName: "dist/*.whl",
-                        subdir: "prodmgr"
-                    )
-                }
-            }
-        }
-    }
-
-    post('Post-build steps') {
-        failure {
-            emailext (
-                subject: "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
-                body: """<p>FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]':</p>
-                <p>Check console output at &QUOT;<a href='${env.BUILD_URL}'>${env.JOB_NAME} [${env.BUILD_NUMBER}]</a>&QUOT;</p>""",
-                recipientProviders: [[$class: 'CulpritsRecipientProvider'], [$class: 'RequesterRecipientProvider']]
-            )
-        }
-
-        success {
-            archiveArtifacts artifacts: 'dist/*', fingerprint: true
-        }
-    }
-}
+rpmBuild(
+    product: "sat",
+    target_node: "ncn",
+    specfile: "cray-prodmgr.spec",
+    channel: "sat-ci",
+)
