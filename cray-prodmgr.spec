@@ -10,7 +10,10 @@ Summary: Shasta Product Manager CLI
 Group: System/Management
 BuildRoot: %{_topdir}
 Vendor: Hewlett Packard Enterprise Company
-Requires: kubectl
+# TODO(MTL-1570): It is currently impossible to install this package into the
+# NCN image when kubectl is listed as a dependency, due to this package being
+# installed before the kubectl is available.
+#Requires: kubectl
 Requires: podman
 Requires: python3-PyYAML
 
