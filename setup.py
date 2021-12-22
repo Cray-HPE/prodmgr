@@ -28,7 +28,7 @@ setup(
     description='Shasta Product Manager CLI',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://stash.us.cray.com/projects/SAT/repos/prodmgr/',
+    url='https://github.hpe.com/hpe/hpc-sat-prodmgr',
     author='Hewlett Packard Enterprise Development LP',
     packages=find_packages(exclude=['tests', 'tests.*', 'tools', 'tools.*']),
     python_requires='>=3, <4',
