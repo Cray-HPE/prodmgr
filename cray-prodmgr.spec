@@ -1,6 +1,8 @@
 # Spec file for Product Manager CLI
 # (C) Copyright 2021 Hewlett Packard Enterprise Development LP.
 
+%define man_subdir %{_mandir}/man8
+
 Name: cray-prodmgr
 Version: %(./tools/changelog.py ./CHANGELOG.md)
 License: HPE Proprietary
@@ -16,7 +18,7 @@ Vendor: Hewlett Packard Enterprise Company
 #Requires: kubectl
 Requires: podman
 Requires: python3-PyYAML
-
+BuildRequires: python3-docutils
 
 %description
 The prodmgr command is responsible for launching product install utility images.
@@ -25,10 +27,18 @@ The prodmgr command is responsible for launching product install utility images.
 %setup -n %{name}-%{version}
 
 %build
+# make man pages
+cd man
+make
+cd -
 
 %install
 python3 setup.py install -O1 --root="$RPM_BUILD_ROOT" --record=INSTALLED_FILES \
                              --install-scripts=/usr/bin
+
+# Install man pages
+install -m 755 -d %{buildroot}/%{man_subdir}/
+cp man/*.8 %{buildroot}/%{man_subdir}/
 
 # This is a hack taken from the DST-EXAMPLES / example-rpm-python repo to get
 # the package directory, i.e. /usr/lib/python3.6/site-packages/sat which is not
@@ -42,3 +52,4 @@ cat INSTALLED_FILES | grep __pycache__ | xargs dirname | xargs dirname | uniq >>
 # need to manually install it here.
 
 %files -f INSTALLED_FILES
+%{man_subdir}/*.8.gz
