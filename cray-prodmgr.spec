@@ -40,6 +40,7 @@ Vendor: Hewlett Packard Enterprise Company
 #Requires: kubectl
 Requires: podman
 Requires: python3-PyYAML
+BuildRequires: python3-setuptools
 BuildRequires: python3-docutils
 
 %description
