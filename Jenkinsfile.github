@@ -29,7 +29,7 @@ pipeline {
     agent {
         docker {
             label 'metal-gcp-builder'
-            image 'artifactory.algol60.net/csm-docker/stable/sle15sp3_build_environment:latest'
+            image 'artifactory.algol60.net/csm-docker/stable/csm-docker-sle:15.3'
             args '-u root'
         }
     }
