@@ -7,6 +7,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.5] - 2022-06-14
+
+### Fixed
+- Fixed builds of stable RPMs by running publishing step outside of container,
+  and add Dockerfile which sets up build dependencies, so that the build does
+  not need to run as root.
+
 ## [1.1.4] - 2022-06-08
 
 ### Fixed

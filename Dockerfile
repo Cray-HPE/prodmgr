@@ -1,7 +1,7 @@
 #
 # MIT License
 #
-# (C) Copyright 2021-2022 Hewlett Packard Enterprise Development LP
+# (C) Copyright 2022 Hewlett Packard Enterprise Development LP
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -21,28 +21,8 @@
 # ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 #
+# Dockerfile for building prodmgr. This installs the build dependencies.
 
-NAME ?= cray-prodmgr
-VERSION = $(shell tools/changelog.py ./CHANGELOG.md)
-BUILD_METADATA ?= 1~development~$(shell git rev-parse --short HEAD)
+FROM artifactory.algol60.net/csm-docker/stable/csm-docker-sle:15.3
 
-SPEC_FILE ?= ${NAME}.spec
-SOURCE_NAME ?= ${NAME}
-BUILD_DIR ?= $(PWD)/dist/rpmbuild
-SOURCE_PATH := ${BUILD_DIR}/SOURCES/${SOURCE_NAME}-${VERSION}.tar.bz2
-
-rpm: prepare rpm_package_source rpm_build_source rpm_build
-
-prepare:
-	rm -rf $(BUILD_DIR)
-	mkdir -p $(BUILD_DIR)/SPECS $(BUILD_DIR)/SOURCES
-	cp $(SPEC_FILE) $(BUILD_DIR)/SPECS/
-
-rpm_package_source:
-	tar --transform 'flags=r;s,^,/$(NAME)-$(VERSION)/,' --exclude .git --exclude dist -cvjf $(SOURCE_PATH) .
-
-rpm_build_source:
-	BUILD_METADATA=$(BUILD_METADATA) rpmbuild -ts $(SOURCE_PATH) --define "_topdir $(BUILD_DIR)"
-
-rpm_build:
-	BUILD_METADATA=$(BUILD_METADATA) rpmbuild -ba $(SPEC_FILE) --define "_topdir $(BUILD_DIR)"
+RUN zypper install --no-confirm python3-docutils python3-setuptools
