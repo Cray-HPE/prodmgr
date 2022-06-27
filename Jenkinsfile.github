@@ -27,11 +27,7 @@
 
 pipeline {
     agent {
-        docker {
-            label 'metal-gcp-builder'
-            image 'artifactory.algol60.net/csm-docker/stable/csm-docker-sle:15.3'
-            args '-u root'
-        }
+        label 'metal-gcp-builder'
     }
 
     options {
@@ -47,26 +43,17 @@ pipeline {
 
     stages {
 
-        stage('Build Prep') {
+        stage('Build RPM Package') {
+            agent {
+                dockerfile {
+                    label 'metal-gcp-builder'
+                    reuseNode true
+                }
+            }
             steps {
                 sh 'make prepare'
-            }
-        }
-
-        stage('Build Source Archive') {
-            steps {
                 sh 'make rpm_package_source'
-            }
-        }
-
-        stage('Build Source RPM') {
-            steps {
                 sh 'make rpm_build_source'
-            }
-        }
-
-        stage('Build RPM') {
-            steps {
                 sh 'make rpm_build'
             }
         }
