@@ -1,11 +1,14 @@
 # prodmgr
 
-`prodmgr` is the CLI for Shasta uninstall and downgrade. It works by running
-product-specific install utility container images.
+`prodmgr` is the CLI for Shasta activation or deletion of versions of products. It works by running
+product-specific install utility container images to activate products and a generic deletion container
+to delete them.
 
 ## Assumptions made by prodmgr
 
-For a product to work with `prodmgr`, an install utility image must exist
+A generic image already exists for deleting products with `prodmgr`.
+
+However, for a product to be activated with `prodmgr`, an install utility image must exist
 for that product, specifically for the version of the product being operated
 on.
 
@@ -15,8 +18,7 @@ This section documents the assumptions that `prodmgr` makes about that image.
 
 The install utility image:
 
-* Is specific to the individual product and provides logic for uninstall
-  and activation.
+* Is specific to the individual product and provides logic for activation.
 * Must be named `cray/PRODUCT-install-utility`.
 * Must be installed (uploaded to Nexus) with the associated product stream,
   and information about it must be added to the product catalog at install
@@ -24,7 +26,7 @@ The install utility image:
 * Must have a main entry point script that accepts specific CLI arguments (see
   [below](#command-line-arguments)).
 
-When running `prodmgr ACTION PRODUCT`, `prodmgr` will assume there is an
+When running `prodmgr activate PRODUCT`, `prodmgr` will assume there is an
 image named `cray/PRODUCT-install-utility` in the container image registry. The
 version is looked up in the `cray-product-catalog` ConfigMap. For example, if
 the following is contained in the product catalog:
@@ -38,14 +40,14 @@ sat:
         version: 3.4.5
 ```
 
-Then running `prodmgr uninstall sat 2.2.10` would result in running
+Then running `prodmgr activate sat 2.2.10` would result in running
 version 3.4.5 of `cray/sat-install-utility`.
 
 ### Command-line Arguments
 
 The install utility image default entry point script:
 
-* Must accept an 'action' (`uninstall` or `activate`) as its first positional
+* Must accept an 'action' as its first positional. It is only required to support the `activate` action.
   argument.
 * Must accept a 'version' as its second positional argument.
 * Must accept `--product-catalog-name` and `--product-catalog-namespace`
@@ -123,5 +125,9 @@ optional arguments:
 ```
 
 The arguments `--product-catalog-name` and `--product-catalog-namespace` will
-be passed to the underlying container, therefore the underlying container
-must also accept these arguments, with the same names.
+be passed to the underlying container. Therefore, the underlying container
+must also accept these arguments with the same names.
+
+# Unit tests
+Run the unit tests using the following command from the base directory.
+PYTHONPATH=$(pwd) python3 tests/test_main.py

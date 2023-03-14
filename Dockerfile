@@ -1,7 +1,7 @@
 #
 # MIT License
 #
-# (C) Copyright 2022 Hewlett Packard Enterprise Development LP
+# (C) Copyright 2022-2023 Hewlett Packard Enterprise Development LP
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -23,6 +23,6 @@
 #
 # Dockerfile for building prodmgr. This installs the build dependencies.
 
-FROM artifactory.algol60.net/csm-docker/stable/csm-docker-sle:15.3
+FROM artifactory.algol60.net/csm-docker/stable/csm-docker-sle:15.4
 
 RUN zypper install --no-confirm python3-docutils python3-setuptools

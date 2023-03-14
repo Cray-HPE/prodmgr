@@ -7,7 +7,7 @@ Product Manager CLI
 -------------------
 
 :Author: Hewlett Packard Enterprise Development LP.
-:Copyright: Copyright 2021 Hewlett Packard Enterprise Development LP.
+:Copyright: Copyright 2021-2023 Hewlett Packard Enterprise Development LP.
 :Manual section: 8
 
 SYNOPSIS
@@ -18,15 +18,17 @@ SYNOPSIS
 DESCRIPTION
 ===========
 
-prodmgr is the CLI for Shasta uninstall and downgrade. It works by running
-product-specific install utility container images that provide the functionality
-that can "uninstall" or "activate" a given version of a given product.
+prodmgr is the CLI for Shasta product deletion and product activation. It works by running
+a generic product deletion utility container image that provides the functionality
+that can delete a given version of a given product. For product activation, prodmgr
+launches a product specific utility container image that provides activation functionality.
 
 ARGUMENTS
 =========
 
 *ACTION*
-    The action to perform on the specified product. "uninstall" or "activate".
+    The action to perform on the specified product. "delete", "uninstall", or "activate". Note, both the "uninstall" and "activate" commands have been deprecated.
+    The "delete" and "uninstall" actions are identical.
 
 *PRODUCT*
     The name of the product for which to perform the specified action.
@@ -70,11 +72,11 @@ OPTIONS
 EXAMPLES
 ========
 
-Uninstall SAT version 2.2.10.
+Delete SAT version 2.2.10.
 
 ::
 
-    # prodmgr uninstall sat 2.2.10
+    # prodmgr delete sat 2.2.10
     Running cray/sat-install-utility:1.4.0-20211122193744_8cc33b0
     cray/cray-sat:3.12.0-20211207204308_4c03082 has been removed.
     cray/sat-cfs-install:1.0.3-20210907184559_253262a has been removed.

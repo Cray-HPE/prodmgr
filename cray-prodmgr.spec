@@ -1,7 +1,7 @@
 #
 # MIT License
 #
-# (C) Copyright 2021-2022 Hewlett Packard Enterprise Development LP
+# (C) Copyright 2021-2023 Hewlett Packard Enterprise Development LP
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -44,7 +44,8 @@ BuildRequires: python3-setuptools
 BuildRequires: python3-docutils
 
 %description
-The prodmgr command is responsible for launching product install utility images.
+The prodmgr command is responsible for launching product install utility and delete utility images.
+It is used for activating (deprecated) and deleting versions of products.
 
 %prep
 %setup -n %{name}-%{version}
@@ -70,7 +71,7 @@ cp man/*.8 %{buildroot}/%{man_subdir}/
 cat INSTALLED_FILES | grep __pycache__ | xargs dirname | xargs dirname | uniq >> INSTALLED_FILES
 
 # Our top-level `prodmgr` script is currently installed by specifying our main
-# function as an entry_point. Thus is it installed by `setup.py` above and
+# function as an entry_point. Thus it is installed by `setup.py` above and
 # listed in INSTALLED_FILES. If we change how that script is generated, we will
 # need to manually install it here.
 
