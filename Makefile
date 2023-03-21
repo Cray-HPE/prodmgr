@@ -33,6 +33,10 @@ SOURCE_PATH := ${BUILD_DIR}/SOURCES/${SOURCE_NAME}-${VERSION}.tar.bz2
 
 rpm: prepare rpm_package_source rpm_build_source rpm_build
 
+runbuildprep:
+	./cms_meta_tools/scripts/runBuildPrep.sh
+	rm ./cms_meta_tools/cms-meta-tools.spec
+
 prepare:
 	rm -rf $(BUILD_DIR)
 	mkdir -p $(BUILD_DIR)/SPECS $(BUILD_DIR)/SOURCES

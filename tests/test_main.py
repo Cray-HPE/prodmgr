@@ -175,8 +175,8 @@ class TestGetDockerImage(unittest.TestCase):
         )
 
 
-class TestRunInstallUtility(unittest.TestCase):
-    """Test the run_install_utility function."""
+class TestRunUtility(unittest.TestCase):
+    """Test the run_install_utility function and run_delete_utility function."""
 
     def setUp(self):
         """Set up mocks."""

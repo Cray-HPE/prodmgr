@@ -23,7 +23,7 @@
  *
  */
 
-@Library('csm-shared-library') _
+@Library(['csm-shared-library','cms-meta-tools']) _
 
 pipeline {
     agent {
@@ -43,6 +43,30 @@ pipeline {
 
     stages {
 
+        stage("Set the version based off of the CHANGELOG") {
+            steps {
+                sh './tools/changelog.py ./CHANGELOG.md > .version'
+            }
+        }
+        stage("Clone cms_meta_tools repo") {
+            steps {
+                // This function is defined in cms-meta-tools:vars/cloneCMSMetaTools.groovy
+                cloneCMSMetaTools()
+                }
+            }
+        stage("Set Versions") {
+            steps {
+                // This function is defined in cms-meta-tools:vars/setVersionFiles.groovy
+                setVersionFiles()
+                }
+            }
+        stage("runBuildPrep") {
+            steps {
+                 withCredentials([usernamePassword(credentialsId: 'artifactory-algol60-readonly', passwordVariable: 'ARTIFACTORY_PASSWORD', usernameVariable: 'ARTIFACTORY_USERNAME')]) {
+                    sh "make runbuildprep"
+                    }
+                }
+            }
         stage('Build RPM Package') {
             agent {
                 dockerfile {

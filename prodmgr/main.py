@@ -220,8 +220,7 @@ def run_install_utility(image_name, image_version, args, remaining_args):
     except CalledProcessError as cpe:
         raise ProdmgrError(f'Running {image_name} failed: {cpe}')
 
-
-def main():
+def main(*args):
     """Main method."""
     parser = create_parser()
     # Parse arguments that are known to the script, but other arguments
@@ -230,17 +229,28 @@ def main():
     try:
         if args.action.lower() == 'activate':
             docker_image_to_find = f'{args.product}-install-utility'
-            func_to_run = run_install_utility
+            # Find the image version.
+            image_name, image_version = get_docker_image(docker_image_to_find,
+                                                        args.product,
+                                                        args.version,
+                                                        args.product_catalog_name,
+                                                        args.product_catalog_namespace)
+            run_install_utility(image_name, image_version, args, remaining_args)
         else:
-            docker_image_to_find = 'product-deletion-utility'
-            func_to_run = run_deletion_utility
-
-        image_name, image_version = get_docker_image(docker_image_to_find,
-                                                     args.product,
-                                                     args.version,
-                                                     args.product_catalog_name,
-                                                     args.product_catalog_namespace)
-        func_to_run(image_name, image_version, args, remaining_args)
+            image_name = args.deletion_image_name
+            image_version = args.deletion_image_version
+            # Specifying a CSM version means looking up the container version in the
+            # product catalog.
+            if args.csm_version:
+                image_name, image_version = get_docker_image(image_name,
+                                                            "csm",
+                                                            csm_version,
+                                                            args.product_catalog_name,
+                                                            args.product_catalog_namespace)
+            run_deletion_utility(image_name, image_version, args, remaining_args)
     except ProdmgrError as err:
         print(err)
         raise SystemExit(1)
+
+if "__main__" == __name__:
+    main()
