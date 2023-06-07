@@ -1,7 +1,7 @@
 #
 # MIT License
 #
-# (C) Copyright 2021 Hewlett Packard Enterprise Development LP
+# (C) Copyright 2021-2023 Hewlett Packard Enterprise Development LP
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -24,7 +24,7 @@
 """
 Main entry point for prodmgr.
 """
-
+import os
 from subprocess import check_call, check_output, CalledProcessError
 
 from yaml import safe_load, YAMLError
@@ -77,57 +77,118 @@ def read_catalog(product_catalog_name, product_catalog_namespace):
         )
 
 
-def get_install_utility_image(product, version, product_catalog_name, product_catalog_namespace):
-    """Use config map data to get the right version of the install utility to use.
+def get_docker_image(docker_image, product, version, product_catalog_name, product_catalog_namespace,
+                     base_name_match=True):
+    """Find the version of the name Docker image for the specified product and version in the config map.
 
     Args:
-        product (str): The name of the product for which to get the install
-            utility image version.
-        version (str): The version of the product for which to get the install
-            utility image version.
+        docker_image (str): The name of the Docker image for which to get the version
+        product (str): The name of the product for which to get the Docker image's version
+        version (str): The version of the product for which to get the Docker image's version
         product_catalog_name (str): The name of the Kubernetes config map
             containing the product catalog.
         product_catalog_namespace (str): The namespace of the Kubernetes config
             map containing the product catalog.
+        base_name_match (bool): this flag, if set to True, means only the base
+            name portion the string (i.e. the file name) retrieved from the
+            product catalog will be matched against the docker_image.
+            If set to False, it means the entire string including any path
+            elements that precede the file name will be part of the match.
+            Example:
+              String from product catalog is '/path/file-name'
+              base_name_match=True --> docker_image matched against 'base-name'
+              base_name_match=False --> docker_image matched against '/path/base-name'
 
     Returns:
         tuple: A tuple of:
-            - (str): Install utility image name
-            - (str): Install utility image version
+            - (str): Docker image name
+            - (str): Docker image version
+
+    Raises:
+        ProdmgrError when an image is not found
     """
     installed_products = read_catalog(product_catalog_name, product_catalog_namespace)
-    install_utility_image_name = f'cray/{product}-install-utility'
     product_data = installed_products.get(product, {}).get(version, {})
 
     if not product_data:
         raise ProdmgrError(f'No product information found for {product}:{version}.')
 
     component_versions = product_data.get('component_versions', {})
+    if not component_versions:
+        raise ProdmgrError(f'No component information found for {product}:{version}.')
 
-    install_utility_images = [img for img in component_versions.get('docker', [])
-                              if img.get('name') == install_utility_image_name]
+    if base_name_match:
+        if '/' in docker_image:
+            raise ProdmgrError(f'{docker_image} contains an invalid character: /. '
+                               f'For full path search, set base_name_match to False.')
 
-    if not install_utility_images:
+        docker_images = [img for img in component_versions.get('docker', [])
+                         if os.path.basename(img.get('name')) == docker_image]
+    else:
+        docker_images = [img for img in component_versions.get('docker', [])
+                         if img.get('name') == docker_image]
+
+    if not docker_images:
         raise ProdmgrError(
-            f'Image {install_utility_image_name} not found in product data for {product}:{version}'
+            f'Image {docker_image} not found in product data for {product}:{version}'
         )
 
-    elif len(install_utility_images) > 1:
+    elif len(docker_images) > 1:
         raise ProdmgrError(
-            f'Multiple {install_utility_image_name} images found in product data for {product}:{version}'
+            f'Multiple {docker_image} images found in product data for {product}:{version}'
         )
 
-    image_version = install_utility_images[0].get('version')
+    image_name = docker_images[0].get('name')
+    if not image_name:
+        raise ProdmgrError(
+            f'Unable to determine name of image {docker_image} from product data'
+        )
+
+    image_version = docker_images[0].get('version', None)
     if not image_version:
         raise ProdmgrError(
-            f'Unable to determine version of image {install_utility_image_name} from product data'
+            f'Unable to determine version of image {docker_image} from product data'
         )
 
-    return install_utility_image_name, image_version
+    return image_name, image_version
+
+
+def run_deletion_utility(image_name, image_version, args, remaining_args):
+    """Invoke the Docker image container.
+
+    Args:
+        image_name (str): The name of the image to run.
+        image_version (str): The version of the image to run.
+        args (Namespace): The argparse.Namespace object containing
+            command-line arguments passed to the command.
+        remaining_args (list): List of remaining command-line arguments
+            not parsed by parse_known_args().
+    """
+    print(f'Running {image_name}:{image_version}')
+
+    podman_command = [
+        'podman', 'run', '--rm',
+        '--mount', f'type=bind,src={args.kube_config_src_file},target={args.kube_config_target_file},ro=true',
+        '--mount', f'type=bind,src={args.cert_src_dir},target={args.cert_target_dir},ro=true',
+        f'{args.container_registry_hostname}/{image_name}:{image_version}',
+        args.action, args.product, args.version,
+        # --product-catalog-name and --product-catalog-namespace are used both by this
+        # script as well as with the underlying install utility image.
+        f'--product-catalog-name={args.product_catalog_name}',
+        f'--product-catalog-namespace={args.product_catalog_namespace}'
+    ]
+
+    # Pass any unrecognized CLI arguments to the container
+    podman_command.extend(remaining_args)
+
+    try:
+        check_call(podman_command)
+    except CalledProcessError as cpe:
+        raise ProdmgrError(f'Running {image_name} failed: {cpe}')
 
 
 def run_install_utility(image_name, image_version, args, remaining_args):
-    """Invoke the install utility container.
+    """Invoke the Docker image container.
 
     Args:
         image_name (str): The name of the image to run.
@@ -157,7 +218,7 @@ def run_install_utility(image_name, image_version, args, remaining_args):
     try:
         check_call(podman_command)
     except CalledProcessError as cpe:
-        raise ProdmgrError(f'Running install utility failed: {cpe}')
+        raise ProdmgrError(f'Running {image_name} failed: {cpe}')
 
 
 def main():
@@ -167,10 +228,19 @@ def main():
     # are assumed to belong to the underlying container script.
     args, remaining_args = parser.parse_known_args()
     try:
-        install_utility_image_name, install_utility_image_version = get_install_utility_image(
-            args.product, args.version, args.product_catalog_name, args.product_catalog_namespace
-        )
-        run_install_utility(install_utility_image_name, install_utility_image_version, args, remaining_args)
+        if args.action.lower() == 'activate':
+            docker_image_to_find = f'{args.product}-install-utility'
+            func_to_run = run_install_utility
+        else:
+            docker_image_to_find = 'product-deletion-utility'
+            func_to_run = run_deletion_utility
+
+        image_name, image_version = get_docker_image(docker_image_to_find,
+                                                     args.product,
+                                                     args.version,
+                                                     args.product_catalog_name,
+                                                     args.product_catalog_namespace)
+        func_to_run(image_name, image_version, args, remaining_args)
     except ProdmgrError as err:
         print(err)
         raise SystemExit(1)

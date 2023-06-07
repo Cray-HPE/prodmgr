@@ -1,7 +1,7 @@
 #
 # MIT License
 #
-# (C) Copyright 2021 Hewlett Packard Enterprise Development LP
+# (C) Copyright 2021-2023 Hewlett Packard Enterprise Development LP
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -48,12 +48,12 @@ def create_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         'action',
-        choices=['uninstall', 'activate'],
-        help='Specify the operation to execute on a product.'
+        choices=['delete', 'uninstall', 'activate'],
+        help='Specify the operation to execute on a product. Note: uninstall is deprecated in favor of delete.'
     )
     parser.add_argument(
         'product',
-        help='The name of the product to uninstall or activate.'
+        help='The name of the product to delete or activate.'
     )
     parser.add_argument(
         'version',
