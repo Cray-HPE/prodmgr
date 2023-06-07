@@ -99,5 +99,20 @@ def create_parser():
         help='The hostname of the container image registry',
         default=DEFAULT_CONTAINER_REGISTRY_HOSTNAME,
     )
+    parser.add_argument(
+        '--deletion-image-name',
+        help='The full path and file name of the deletion image',
+        default='artifactory.algol60.net/csm-docker/stable/product-deletion-utility',
+    )
+    parser.add_argument(
+        '--deletion-image-version',
+        help='The version of the deletion image',
+        default='0.0.0-product-deletion-utility',
+    )
+    parser.add_argument(
+        '--csm-version',
+        help='The version of CSM from whence to query the deletion image',
+        default=None,
+    )
 
     return parser
