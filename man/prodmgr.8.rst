@@ -21,14 +21,15 @@ DESCRIPTION
 prodmgr is the CLI for Shasta product deletion and product activation. It works by running
 a generic product deletion utility container image that provides the functionality
 that can delete a given version of a given product. For product activation, prodmgr
-launches a product specific utility container image that provides activation functionality.
+launches a product-specific utility container image that provides activation functionality.
 
 ARGUMENTS
 =========
 
 *ACTION*
-    The action to perform on the specified product. "delete", "uninstall", or "activate". Note, both the "uninstall" and "activate" commands have been deprecated.
-    The "delete" and "uninstall" actions are identical.
+    The action to perform on the specified product. Supported actions are
+    "delete", "uninstall" (an alias for "delete"), and "activate". The
+    "uninstall" and "activate" actions are deprecated.
 
 *PRODUCT*
     The name of the product for which to perform the specified action.

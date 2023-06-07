@@ -1,20 +1,30 @@
 # prodmgr
 
 `prodmgr` is the CLI for Shasta activation or deletion of versions of products. It works by running
-product-specific install utility container images to activate products and a generic deletion container
-to delete them.
+a generic deletion container to delete product components. When asked to activate a component,
+prodmgr will fall back to using a product-specific install utility container. This fall-back
+approach is to support backwards compatibility during a period of deprecation of the 'activate'
+command.
 
 ## Assumptions made by prodmgr
 
-A generic image already exists for deleting products with `prodmgr`.
+A generic image already exists for deleting products with `prodmgr`. Products, therefore, do
+not need to do anything or provide any image to be able to delete their components.
 
 However, for a product to be activated with `prodmgr`, an install utility image must exist
 for that product, specifically for the version of the product being operated
-on.
+on. The ability to activate a product is supported for backwards compability and has been
+deprecated going forward, meaning at some point it will be removed.
 
 This section documents the assumptions that `prodmgr` makes about that image.
 
 ### Install Utility Image
+
+NOTE: activating a product has been deprecated, and products should not rely
+on this. This is only being supported for legacy products that already provided
+an image explicitly for this purpose. Products do not need to create this image
+if all they want to do is delete their components. A generic image is provided
+for that.
 
 The install utility image:
 
@@ -27,7 +37,7 @@ The install utility image:
   [below](#command-line-arguments)).
 
 When running `prodmgr activate PRODUCT`, `prodmgr` will assume there is an
-image named `cray/PRODUCT-install-utility` in the container image registry. The
+image named `cray/PRODUCT-install-utility` in the image registry. The
 version is looked up in the `cray-product-catalog` ConfigMap. For example, if
 the following is contained in the product catalog:
 

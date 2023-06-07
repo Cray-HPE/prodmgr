@@ -77,7 +77,8 @@ def read_catalog(product_catalog_name, product_catalog_namespace):
         )
 
 
-def get_docker_image(docker_image, product, version, product_catalog_name, product_catalog_namespace, file_name_match=True):
+def get_docker_image(docker_image, product, version, product_catalog_name, product_catalog_namespace,
+                     base_name_match=True):
     """Find the version of the name Docker image for the specified product and version in the config map.
 
     Args:
@@ -88,15 +89,15 @@ def get_docker_image(docker_image, product, version, product_catalog_name, produ
             containing the product catalog.
         product_catalog_namespace (str): The namespace of the Kubernetes config
             map containing the product catalog.
-        file_name_match (bool): this flag, if set to True, means only the file
-            name portion the string retrieved from the product catalog will be
-            matched against the docker_image.
+        base_name_match (bool): this flag, if set to True, means only the base
+            name portion the string (i.e. the file name) retrieved from the
+            product catalog will be matched against the docker_image.
             If set to False, it means the entire string including any path
             elements that precede the file name will be part of the match.
             Example:
               String from product catalog is '/path/file-name'
-              file_name_match=True --> docker_image matched against 'file-name'
-              file_name_match=False --> docker_image matched against '/path/file-name'
+              base_name_match=True --> docker_image matched against 'base-name'
+              base_name_match=False --> docker_image matched against '/path/base-name'
 
     Returns:
         tuple: A tuple of:
@@ -116,9 +117,11 @@ def get_docker_image(docker_image, product, version, product_catalog_name, produ
     if not component_versions:
         raise ProdmgrError(f'No component information found for {product}:{version}.')
 
-    if file_name_match:
+    if base_name_match:
         if '/' in docker_image:
-            raise ProdmgrError(f'{docker_image} contains an invalid character: /. For full path search, set file_name_match to False.')
+            raise ProdmgrError(f'{docker_image} contains an invalid character: /. '
+                               f'For full path search, set base_name_match to False.')
+
         docker_images = [img for img in component_versions.get('docker', [])
                          if os.path.basename(img.get('name')) == docker_image]
     else:
@@ -216,6 +219,7 @@ def run_install_utility(image_name, image_version, args, remaining_args):
         check_call(podman_command)
     except CalledProcessError as cpe:
         raise ProdmgrError(f'Running {image_name} failed: {cpe}')
+
 
 def main():
     """Main method."""
