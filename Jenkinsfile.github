@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * (C) Copyright 2022 Hewlett Packard Enterprise Development LP
+ * (C) Copyright 2022-2023 Hewlett Packard Enterprise Development LP
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -23,7 +23,7 @@
  *
  */
 
-@Library('csm-shared-library') _
+@Library(['csm-shared-library','cms-meta-tools']) _
 
 pipeline {
     agent {
@@ -43,6 +43,30 @@ pipeline {
 
     stages {
 
+        stage("Set the version based off of the CHANGELOG") {
+            steps {
+                sh './tools/changelog.py ./CHANGELOG.md > .version'
+            }
+        }
+        stage("Clone cms_meta_tools repo") {
+            steps {
+                // This function is defined in cms-meta-tools:vars/cloneCMSMetaTools.groovy
+                cloneCMSMetaTools()
+                }
+            }
+        stage("Set Versions") {
+            steps {
+                // This function is defined in cms-meta-tools:vars/setVersionFiles.groovy
+                setVersionFiles()
+                }
+            }
+        stage("runBuildPrep") {
+            steps {
+                 withCredentials([usernamePassword(credentialsId: 'artifactory-algol60-readonly', passwordVariable: 'ARTIFACTORY_PASSWORD', usernameVariable: 'ARTIFACTORY_USERNAME')]) {
+                    sh "make runbuildprep"
+                    }
+                }
+            }
         stage('Build RPM Package') {
             agent {
                 dockerfile {
@@ -62,14 +86,14 @@ pipeline {
             steps {
                 script {
                     publishCsmRpms(
-                        os: 'sle-15sp3',
+                        os: 'sle-15sp4',
                         component: env.NAME,
                         pattern: 'dist/rpmbuild/RPMS/x86_64/*.rpm',
                         arch: 'x86_64',
                         isStable: env.IS_STABLE
                     )
                     publishCsmRpms(
-                        os: 'sle-15sp3',
+                        os: 'sle-15sp4',
                         component: env.NAME,
                         pattern: 'dist/rpmbuild/SRPMS/*.rpm',
                         arch: 'src',

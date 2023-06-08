@@ -1,7 +1,7 @@
 #
 # MIT License
 #
-# (C) Copyright 2021-2022 Hewlett Packard Enterprise Development LP
+# (C) Copyright 2021-2023 Hewlett Packard Enterprise Development LP
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -32,6 +32,10 @@ BUILD_DIR ?= $(PWD)/dist/rpmbuild
 SOURCE_PATH := ${BUILD_DIR}/SOURCES/${SOURCE_NAME}-${VERSION}.tar.bz2
 
 rpm: prepare rpm_package_source rpm_build_source rpm_build
+
+runbuildprep:
+	./cms_meta_tools/scripts/runBuildPrep.sh
+	rm ./cms_meta_tools/cms-meta-tools.spec
 
 prepare:
 	rm -rf $(BUILD_DIR)

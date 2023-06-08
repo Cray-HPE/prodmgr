@@ -1,7 +1,7 @@
 #
 # MIT License
 #
-# (C) Copyright 2021 Hewlett Packard Enterprise Development LP
+# (C) Copyright 2021-2023 Hewlett Packard Enterprise Development LP
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -50,7 +50,7 @@ setup(
     description='Shasta Product Manager CLI',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://github.hpe.com/hpe/hpc-sat-prodmgr',
+    url='https://github.com/Cray-HPE/prodmgr',
     author='Hewlett Packard Enterprise Development LP',
     packages=find_packages(exclude=['tests', 'tests.*', 'tools', 'tools.*']),
     python_requires='>=3, <4',

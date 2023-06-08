@@ -1,7 +1,7 @@
 #
 # MIT License
 #
-# (C) Copyright 2021 Hewlett Packard Enterprise Development LP
+# (C) Copyright 2021-2023 Hewlett Packard Enterprise Development LP
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -48,12 +48,12 @@ def create_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         'action',
-        choices=['uninstall', 'activate'],
-        help='Specify the operation to execute on a product.'
+        choices=['delete', 'uninstall', 'activate'],
+        help='Specify the operation to execute on a product. Note: uninstall is deprecated in favor of delete.'
     )
     parser.add_argument(
         'product',
-        help='The name of the product to uninstall or activate.'
+        help='The name of the product to delete or activate.'
     )
     parser.add_argument(
         'version',
@@ -98,6 +98,21 @@ def create_parser():
         '--container-registry-hostname',
         help='The hostname of the container image registry',
         default=DEFAULT_CONTAINER_REGISTRY_HOSTNAME,
+    )
+    parser.add_argument(
+        '--deletion-image-name',
+        help='The full path and file name of the deletion image',
+        default='artifactory.algol60.net/csm-docker/stable/product-deletion-utility',
+    )
+    parser.add_argument(
+        '--deletion-image-version',
+        help='The version of the deletion image',
+        default='0.0.0-product-deletion-utility',
+    )
+    parser.add_argument(
+        '--csm-version',
+        help='The version of CSM from whence to query the deletion image',
+        default=None,
     )
 
     return parser
