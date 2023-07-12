@@ -230,7 +230,7 @@ def run_install_utility(image_name, image_version, args, remaining_args):
     print(f"Final podman command is - {final_podman_command}")
 
     try:
-        check_call(podman_command)
+        check_call(final_podman_command)
     except CalledProcessError as cpe:
         raise ProdmgrError(f'Running {image_name} failed: {cpe}')
 
