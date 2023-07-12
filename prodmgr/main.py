@@ -169,20 +169,27 @@ def run_deletion_utility(image_name, image_version, args, remaining_args):
     podman_command = [
         'podman', 'run', '--rm',
         '--mount', f'type=bind,src={args.kube_config_src_file},target={args.kube_config_target_file},ro=true',
-        '--mount', f'type=bind,src={args.cert_src_dir},target={args.cert_target_dir},ro=true',
-        f'{args.container_registry_hostname}/{image_name}:{image_version}',
+        '--mount', f'type=bind,src={args.cert_src_dir},target={args.cert_target_dir},ro=true']
+
+    if args.podman_options:
+        podman_options_command = args.podman_options.split(" ")
+        podman_command = podman_command + podman_options_command
+
+    container_command = [f'{args.container_registry_hostname}/{image_name}:{image_version}',
         args.action, args.product, args.version,
         # --product-catalog-name and --product-catalog-namespace are used both by this
         # script as well as with the underlying install utility image.
         f'--product-catalog-name={args.product_catalog_name}',
         f'--product-catalog-namespace={args.product_catalog_namespace}'
     ]
+    final_podman_command = podman_command + container_command
 
     # Pass any unrecognized CLI arguments to the container
-    podman_command.extend(remaining_args)
+    final_podman_command.extend(remaining_args)
+    print(f"Final podman command is - {final_podman_command}")
 
     try:
-        check_call(podman_command)
+        check_call(final_podman_command)
     except CalledProcessError as cpe:
         raise ProdmgrError(f'Running {image_name} failed: {cpe}')
 
@@ -203,17 +210,24 @@ def run_install_utility(image_name, image_version, args, remaining_args):
     podman_command = [
         'podman', 'run', '--rm',
         '--mount', f'type=bind,src={args.kube_config_src_file},target={args.kube_config_target_file},ro=true',
-        '--mount', f'type=bind,src={args.cert_src_dir},target={args.cert_target_dir},ro=true',
-        f'{args.container_registry_hostname}/{image_name}:{image_version}',
+        '--mount', f'type=bind,src={args.cert_src_dir},target={args.cert_target_dir},ro=true']
+
+    if args.podman_options:
+        podman_options_command = args.podman_options.split(" ")
+        podman_command = podman_command + podman_options_command
+
+    container_command = [f'{args.container_registry_hostname}/{image_name}:{image_version}',
         args.action, args.version,
         # --product-catalog-name and --product-catalog-namespace are used both by this
         # script as well as with the underlying install utility image.
         f'--product-catalog-name={args.product_catalog_name}',
         f'--product-catalog-namespace={args.product_catalog_namespace}'
     ]
+    final_podman_command = podman_command + container_command
 
     # Pass any unrecognized CLI arguments to the container
-    podman_command.extend(remaining_args)
+    final_podman_command.extend(remaining_args)
+    print(f"Final podman command is - {final_podman_command}")
 
     try:
         check_call(podman_command)
