@@ -171,9 +171,8 @@ def run_deletion_utility(image_name, image_version, args, remaining_args):
         '--mount', f'type=bind,src={args.kube_config_src_file},target={args.kube_config_target_file},ro=true',
         '--mount', f'type=bind,src={args.cert_src_dir},target={args.cert_target_dir},ro=true']
 
-    if args.podman_options:
-        podman_options_command = args.podman_options.split(" ")
-        podman_command = podman_command + podman_options_command
+    if args.extra_podman_config:
+        podman_command = podman_command + args.extra_podman_config.split(" ")
 
     container_command = [f'{args.container_registry_hostname}/{image_name}:{image_version}',
         args.action, args.product, args.version,
@@ -182,14 +181,14 @@ def run_deletion_utility(image_name, image_version, args, remaining_args):
         f'--product-catalog-name={args.product_catalog_name}',
         f'--product-catalog-namespace={args.product_catalog_namespace}'
     ]
-    final_podman_command = podman_command + container_command
+    deletion_utility_command = podman_command + container_command
 
     # Pass any unrecognized CLI arguments to the container
-    final_podman_command.extend(remaining_args)
-    print(f"Final podman command is - {final_podman_command}")
+    deletion_utility_command.extend(remaining_args)
+    print(f"Launching deletion utility using - {deletion_utility_command}")
 
     try:
-        check_call(final_podman_command)
+        check_call(deletion_utility_command)
     except CalledProcessError as cpe:
         raise ProdmgrError(f'Running {image_name} failed: {cpe}')
 
@@ -212,9 +211,8 @@ def run_install_utility(image_name, image_version, args, remaining_args):
         '--mount', f'type=bind,src={args.kube_config_src_file},target={args.kube_config_target_file},ro=true',
         '--mount', f'type=bind,src={args.cert_src_dir},target={args.cert_target_dir},ro=true']
 
-    if args.podman_options:
-        podman_options_command = args.podman_options.split(" ")
-        podman_command = podman_command + podman_options_command
+    if args.extra_podman_config:
+        podman_command = podman_command + args.extra_podman_config.split(" ")
 
     container_command = [f'{args.container_registry_hostname}/{image_name}:{image_version}',
         args.action, args.version,
@@ -223,14 +221,14 @@ def run_install_utility(image_name, image_version, args, remaining_args):
         f'--product-catalog-name={args.product_catalog_name}',
         f'--product-catalog-namespace={args.product_catalog_namespace}'
     ]
-    final_podman_command = podman_command + container_command
+    install_utility_command = podman_command + container_command
 
     # Pass any unrecognized CLI arguments to the container
-    final_podman_command.extend(remaining_args)
-    print(f"Final podman command is - {final_podman_command}")
+    install_utility_command.extend(remaining_args)
+    print(f"Launching install utility using - {install_utility_command}")
 
     try:
-        check_call(final_podman_command)
+        check_call(install_utility_command)
     except CalledProcessError as cpe:
         raise ProdmgrError(f'Running {image_name} failed: {cpe}')
 
@@ -268,3 +266,4 @@ def main(*args):
 
 if "__main__" == __name__:
     main()
+

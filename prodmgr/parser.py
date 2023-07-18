@@ -116,8 +116,8 @@ def create_parser():
     )
 
     parser.add_argument(
-        '--podman-options',
-        help='Arbitrary podman options to be provided as a string while using deletion image(Eg: --podman-options "--mount /tmp/ --rm --name deletion-container")',
+        '--extra-podman-config',
+        help='Additional podman options when launching the deletion/install utility using podman container engine(Eg: --extra-podman-config "--mount type=bind,src=<src>,target=<target> --no-hosts --name deletion-container")',
         default=None,
     )
 
