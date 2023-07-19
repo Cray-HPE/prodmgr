@@ -25,16 +25,56 @@
 Main entry point for prodmgr.
 """
 import os
-from subprocess import check_call, check_output, CalledProcessError
+import logging
+import sys
 
+from subprocess import check_call, check_output, CalledProcessError, STDOUT
 from yaml import safe_load, YAMLError
-
 from prodmgr.parser import create_parser
+from datetime import datetime
+from prodmgr.constants import DEFAULT_LOG_DIR
+
+LOGGER = logging.getLogger('prodmgr')
+logfile = ''
 
 
 class ProdmgrError(Exception):
     """Something failed in the prodmgr script."""
     pass
+
+
+def _setup_logging(product, version, action):
+    """ Setup stdout logging for this script """
+    LOGGER.setLevel(logging.DEBUG)
+    global logfile
+
+    # set the console logger
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_formatter = logging.Formatter(
+        '%(name)s - %(levelname)s - %(message)s')
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(console_formatter)
+    LOGGER.addHandler(console_handler)
+
+    # set the file logger
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    logfile = f'{action}-{product}-{version}-' + timestamp
+
+    if not os.path.exists(DEFAULT_LOG_DIR):
+        try:
+            os.makedirs(DEFAULT_LOG_DIR)
+            logfile = os.path.join(DEFAULT_LOG_DIR, logfile)
+        except OSError as error:
+            LOGGER.debug(f"Using current directory {os.getcwd()} for log file")
+            logfile = os.path.join(os.getcwd(), logfile)
+    else:
+        logfile = os.path.join(DEFAULT_LOG_DIR, logfile)
+
+    file_handler = logging.FileHandler(filename=logfile)
+    file_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')  # noqa: E501
+    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(file_formatter)
+    LOGGER.addHandler(file_handler)
 
 
 def read_catalog(product_catalog_name, product_catalog_namespace):
@@ -61,7 +101,8 @@ def read_catalog(product_catalog_name, product_catalog_namespace):
             f'Unable to to read {config_map_name}: {err}'
         )
     except YAMLError as err:
-        raise ProdmgrError(f'Failed to load data from {config_map_name}: {err}')
+        raise ProdmgrError(
+            f'Failed to load data from {config_map_name}: {err}')
 
     if not config_map.get('data'):
         raise ProdmgrError(f'{config_map_name} has no data under "data" key')
@@ -107,15 +148,18 @@ def get_docker_image(docker_image, product, version, product_catalog_name, produ
     Raises:
         ProdmgrError when an image is not found
     """
-    installed_products = read_catalog(product_catalog_name, product_catalog_namespace)
+    installed_products = read_catalog(
+        product_catalog_name, product_catalog_namespace)
     product_data = installed_products.get(product, {}).get(version, {})
 
     if not product_data:
-        raise ProdmgrError(f'No product information found for {product}:{version}.')
+        raise ProdmgrError(
+            f'No product information found for {product}:{version}.')
 
     component_versions = product_data.get('component_versions', {})
     if not component_versions:
-        raise ProdmgrError(f'No component information found for {product}:{version}.')
+        raise ProdmgrError(
+            f'No component information found for {product}:{version}.')
 
     if base_name_match:
         if '/' in docker_image:
@@ -164,31 +208,36 @@ def run_deletion_utility(image_name, image_version, args, remaining_args):
         remaining_args (list): List of remaining command-line arguments
             not parsed by parse_known_args().
     """
-    print(f'Running {image_name}:{image_version}')
+    LOGGER.debug(f'Running {image_name}:{image_version}')
 
     podman_command = [
         'podman', 'run', '--rm',
         '--mount', f'type=bind,src={args.kube_config_src_file},target={args.kube_config_target_file},ro=true',
-        '--mount', f'type=bind,src={args.cert_src_dir},target={args.cert_target_dir},ro=true']
+        '--mount', f'type=bind,src={args.cert_src_dir},target={args.cert_target_dir},ro=true',
+        '--mount', f'type=bind,src={DEFAULT_LOG_DIR},target={DEFAULT_LOG_DIR},ro=false']
 
     if args.extra_podman_config:
         podman_command = podman_command + args.extra_podman_config.split(" ")
 
     container_command = [f'{args.container_registry_hostname}/{image_name}:{image_version}',
-        args.action, args.product, args.version,
-        # --product-catalog-name and --product-catalog-namespace are used both by this
-        # script as well as with the underlying install utility image.
-        f'--product-catalog-name={args.product_catalog_name}',
-        f'--product-catalog-namespace={args.product_catalog_namespace}'
-    ]
+                         args.action, args.product, args.version,
+                         # --product-catalog-name and --product-catalog-namespace are used both by this
+                         # script as well as with the underlying install utility image.
+                         f'--product-catalog-name={args.product_catalog_name}',
+                         f'--product-catalog-namespace={args.product_catalog_namespace}',
+                         f'--log-file={logfile}',
+                         f'--dry-run={args.dry_run}'
+                         ]
     deletion_utility_command = podman_command + container_command
 
     # Pass any unrecognized CLI arguments to the container
     deletion_utility_command.extend(remaining_args)
-    print(f"Launching deletion utility using - {deletion_utility_command}")
+    LOGGER.debug(
+        f"Launching deletion utility using - {deletion_utility_command}")
 
     try:
-        check_call(deletion_utility_command)
+        check_call(
+            deletion_utility_command, universal_newlines=True, stderr=STDOUT)
     except CalledProcessError as cpe:
         raise ProdmgrError(f'Running {image_name} failed: {cpe}')
 
@@ -204,7 +253,7 @@ def run_install_utility(image_name, image_version, args, remaining_args):
         remaining_args (list): List of remaining command-line arguments
             not parsed by parse_known_args().
     """
-    print(f'Running {image_name}:{image_version}')
+    LOGGER.debug(f'Running {image_name}:{image_version}')
 
     podman_command = [
         'podman', 'run', '--rm',
@@ -215,22 +264,28 @@ def run_install_utility(image_name, image_version, args, remaining_args):
         podman_command = podman_command + args.extra_podman_config.split(" ")
 
     container_command = [f'{args.container_registry_hostname}/{image_name}:{image_version}',
-        args.action, args.version,
-        # --product-catalog-name and --product-catalog-namespace are used both by this
-        # script as well as with the underlying install utility image.
-        f'--product-catalog-name={args.product_catalog_name}',
-        f'--product-catalog-namespace={args.product_catalog_namespace}'
-    ]
+                         args.action, args.version,
+                         # --product-catalog-name and --product-catalog-namespace are used both by this
+                         # script as well as with the underlying install utility image.
+                         f'--product-catalog-name={args.product_catalog_name}',
+                         f'--product-catalog-namespace={args.product_catalog_namespace}'
+                         ]
     install_utility_command = podman_command + container_command
 
     # Pass any unrecognized CLI arguments to the container
     install_utility_command.extend(remaining_args)
-    print(f"Launching install utility using - {install_utility_command}")
+    LOGGER.debug(
+        f"Launching install utility using - {install_utility_command}")
 
     try:
-        check_call(install_utility_command)
+        install_result = check_output(
+            install_utility_command, universal_newlines=True, stderr=STDOUT)
     except CalledProcessError as cpe:
+        LOGGER.error(cpe.output)
         raise ProdmgrError(f'Running {image_name} failed: {cpe}')
+    else:
+        LOGGER.info(install_result)
+
 
 def main(*args):
     """Main method."""
@@ -238,32 +293,30 @@ def main(*args):
     # Parse arguments that are known to the script, but other arguments
     # are assumed to belong to the underlying container script.
     args, remaining_args = parser.parse_known_args()
+    _setup_logging(args.product, args.version, args.action.lower())
     try:
         if args.action.lower() == 'activate':
+            LOGGER.warning('The "activate" action is deprecated.')
             docker_image_to_find = f'{args.product}-install-utility'
             # Find the image version.
             image_name, image_version = get_docker_image(docker_image_to_find,
-                                                        args.product,
-                                                        args.version,
-                                                        args.product_catalog_name,
-                                                        args.product_catalog_namespace)
-            run_install_utility(image_name, image_version, args, remaining_args)
+                                                         args.product,
+                                                         args.version,
+                                                         args.product_catalog_name,
+                                                         args.product_catalog_namespace)
+            run_install_utility(image_name, image_version,
+                                args, remaining_args)
         else:
+            if args.action.lower() == 'uninstall':
+                LOGGER.warning('The "uninstall" action is deprecated.')
             image_name = args.deletion_image_name
             image_version = args.deletion_image_version
-            # Specifying a CSM version means looking up the container version in the
-            # product catalog.
-            if args.csm_version:
-                image_name, image_version = get_docker_image(image_name,
-                                                            "csm",
-                                                            csm_version,
-                                                            args.product_catalog_name,
-                                                            args.product_catalog_namespace)
-            run_deletion_utility(image_name, image_version, args, remaining_args)
+            run_deletion_utility(image_name, image_version,
+                                 args, remaining_args)
     except ProdmgrError as err:
-        print(err)
+        LOGGER.critical(err)
         raise SystemExit(1)
+
 
 if "__main__" == __name__:
     main()
-

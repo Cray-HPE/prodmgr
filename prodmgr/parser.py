@@ -49,7 +49,7 @@ def create_parser():
     parser.add_argument(
         'action',
         choices=['delete', 'uninstall', 'activate'],
-        help='Specify the operation to execute on a product. Note: uninstall is deprecated in favor of delete.'
+        help='Specify the operation to execute on a product. Note: activate is deprecated. uninstall is deprecated in favor of delete.'
     )
     parser.add_argument(
         'product',
@@ -121,4 +121,9 @@ def create_parser():
         default=None,
     )
 
+    parser.add_argument(
+        '-d', '--dry-run',
+        action='store_true',
+        help='Lists the components that would be deleted for the provided product:version'
+    )
     return parser
