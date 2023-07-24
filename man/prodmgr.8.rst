@@ -18,10 +18,9 @@ SYNOPSIS
 DESCRIPTION
 ===========
 
-prodmgr is the CLI for Shasta product deletion and product activation. It works by running
+prodmgr is the CLI for Shasta product deletion . It works by running
 a generic product deletion utility container image that provides the functionality
-that can delete a given version of a given product. For product activation, prodmgr
-launches a product-specific utility container image that provides activation functionality.
+that can delete a given version of a given product.
 
 ARGUMENTS
 =========
@@ -69,6 +68,10 @@ OPTIONS
 **--container-registry-hostname**
     The hostname of the container image registry.
     Default: "registry.local"
+
+**--extra-podman-config**
+    Additional podman options when launching the deletion/install utility using podman container engine(Eg: --extra-podman-config "--mount type=bind,src=<src>,target=<target> --no-hosts --name deletion-container")
+    Default: "None"
 
 EXAMPLES
 ========
