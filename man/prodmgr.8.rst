@@ -20,7 +20,7 @@ DESCRIPTION
 
 prodmgr is the CLI for Shasta product deletion . It works by running
 a generic product deletion utility container image that provides the functionality
-that can delete a given version of a given product.
+that can delete a given version of a given product. For product activation, prodmgr launches a product-specific utility container image that provides activation functionality.
 
 ARGUMENTS
 =========
