@@ -115,4 +115,10 @@ def create_parser():
         default=None,
     )
 
+    parser.add_argument(
+        '--extra-podman-config',
+        help='Additional podman options when launching the deletion/install utility using podman container engine(Eg: --extra-podman-config "--mount type=bind,src=<src>,target=<target> --no-hosts --name deletion-container")',
+        default=None,
+    )
+
     return parser
