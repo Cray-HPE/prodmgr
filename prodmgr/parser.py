@@ -107,7 +107,7 @@ def create_parser():
     parser.add_argument(
         '--deletion-image-version',
         help='The version of the deletion image',
-        default='0.0.0-product-deletion-utility',
+        default='1.0.0',
     )
     parser.add_argument(
         '--csm-version',
