@@ -71,7 +71,7 @@ OPTIONS
 
 **--dry-run**
     Lists the components that would be deleted 
-    for the provided product:version"
+    for the provided "product:version"
 
 EXAMPLES
 ========
