@@ -70,8 +70,8 @@ OPTIONS
     Default: "registry.local"
 
 **--dry-run**
-    Lists the components that would be deleted 
-    for the provided "product:version"
+    Only prints the components that would be deleted for a product 
+    version without persisting the changes.
 
 EXAMPLES
 ========
