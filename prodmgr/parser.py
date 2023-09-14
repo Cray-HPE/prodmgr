@@ -124,6 +124,6 @@ def create_parser():
     parser.add_argument(
         '-d', '--dry-run',
         action='store_true',
-        help='Lists the components that would be deleted for the provided product:version'
+        help='Only prints the components that would be deleted for a product version without persisting the changes.'
     )
     return parser

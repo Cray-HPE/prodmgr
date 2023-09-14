@@ -70,8 +70,15 @@ OPTIONS
     Default: "registry.local"
 
 **--extra-podman-config**
-    Additional podman options when launching the deletion/install utility using podman container engine(Eg: --extra-podman-config "--mount type=bind,src=<src>,target=<target> --no-hosts --name deletion-container").
+    Additional podman options when launching the deletion/install 
+    utility using podman container engine(Eg: --extra-podman-config 
+    "--mount type=bind,src=<src>,target=<target> --no-hosts --name 
+    deletion-container"). 
     Default: "None"
+
+**--dry-run**
+    Only prints the components that would be deleted for a product 
+    version without persisting the changes.
 
 EXAMPLES
 ========
